@@ -20,6 +20,53 @@ services:
       timeout: 5s
       retries: 5
 
+  # SSH 클라이언트 테스트 컨테이너 (호스트 PC SSH 서버 테스트용)
+  # 목적: Docker 컨테이너에서 호스트 PC의 Windows OpenSSH Server로 접속 테스트
+  ssh-client-test:
+    image: alpine:latest
+    container_name: ssh-client-test
+    hostname: ssh-client-test
+    networks:
+      - app-network
+    # 호스트 PC와 통신하기 위해 host 모드 사용 (선택사항)
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "
+        echo '=== SSH Client Test Container Started ===' &&
+        echo 'Installing OpenSSH client...' &&
+        apk add --no-cache openssh-client curl iputils &&
+        echo '' &&
+        echo '✓ SSH client installed!' &&
+        echo '' &&
+        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' &&
+        echo '📋 호스트 PC SSH 서버 테스트 방법' &&
+        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' &&
+        echo '' &&
+        echo '1️⃣ 컨테이너 내부로 접속:' &&
+        echo '   docker exec -it ssh-client-test sh' &&
+        echo '' &&
+        echo '2️⃣ 호스트 IP 확인 (Windows PowerShell):' &&
+        echo '   ipconfig' &&
+        echo '   또는 Docker Desktop 사용 시:' &&
+        echo '   host.docker.internal (자동 해석)' &&
+        echo '' &&
+        echo '3️⃣ SSH 연결 테스트:' &&
+        echo '   ssh your_username@host.docker.internal' &&
+        echo '   또는' &&
+        echo '   ssh your_username@192.168.x.x' &&
+        echo '' &&
+        echo '4️⃣ 명령어 실행 테스트:' &&
+        echo '   ssh your_username@host.docker.internal \"echo Hello\"' &&
+        echo '   ssh your_username@host.docker.internal \"dir C:\\\"' &&
+        echo '' &&
+        echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' &&
+        echo '' &&
+        echo '⏳ Container running... Press Ctrl+C to stop' &&
+        tail -f /dev/null
+      "
+    restart: unless-stopped
+
 volumes:
   postgres-data:
     driver: local
