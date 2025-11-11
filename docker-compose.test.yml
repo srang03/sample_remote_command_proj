@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (프로덕션용)
+  postgres:
+    image: postgres:16-alpine
+    container_name: remote_command_postgres
+    environment:
+      POSTGRES_DB: remote_command
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - remote_command_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d remote_command"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # SSH 테스트 서버 (Linux OpenSSH)
+  # Spring Boot 애플리케이션에서 이 서버로 SSH 명령어를 전송할 수 있습니다
+  ssh-test-server:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: ssh_test_server
+    hostname: ssh-test-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - PASSWORD_ACCESS=true           # 비밀번호 인증 활성화
+      - USER_PASSWORD=test1234         # SSH 비밀번호
+      - USER_NAME=testuser             # SSH 사용자명
+      - SUDO_ACCESS=true               # sudo 권한 부여
+      - PUBLIC_KEY_FILE=/config/authorized_keys  # 선택사항: 키 기반 인증
+    ports:
+      - "2222:2222"  # SSH 포트 (호스트:컨테이너)
+    volumes:
+      - ./ssh-test-data:/config  # SSH 설정 및 키 저장
+    networks:
+      - remote_command_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep sshd || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # (선택사항) Spring Boot 애플리케이션을 Docker로 실행
+  # 현재는 호스트에서 직접 실행 중이므로 주석 처리
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: remote_command_app
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=dev
+  #     - DB_PASSWORD=admin123
+  #     - ADMIN_API_KEY=admin-master-key-change-in-production
+  #     - ENCRYPTION_KEY=my-secret-encryption-key-32-chars
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - remote_command_network
+  #   restart: unless-stopped
+
+networks:
+  remote_command_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

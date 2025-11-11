@@ -46,8 +46,11 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
         String requestPath = request.getRequestURI();
 
-        // Actuator 엔드포인트는 인증 제외
-        if (requestPath.startsWith("/actuator")) {
+        // 인증 제외 경로
+        if (requestPath.startsWith("/actuator") ||
+            requestPath.equals("/api/clients/register") ||
+            requestPath.startsWith("/swagger-ui") ||
+            requestPath.startsWith("/v3/api-docs")) {
             filterChain.doFilter(request, response);
             return;
         }
