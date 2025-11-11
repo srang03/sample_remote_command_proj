@@ -1,6 +1,8 @@
 package kr.urock.sample_remote_command_proj.presentation.api;
 
 import jakarta.validation.Valid;
+import kr.urock.sample_remote_command_proj.domain.client.ClientCredential;
+import kr.urock.sample_remote_command_proj.domain.client.ClientService;
 import kr.urock.sample_remote_command_proj.domain.command.Command;
 import kr.urock.sample_remote_command_proj.domain.command.CommandService;
 import kr.urock.sample_remote_command_proj.domain.command.CommandStatus;
@@ -32,6 +34,7 @@ import java.util.Map;
 public class CommandController {
 
     private final CommandService commandService;
+    private final ClientService clientService;
 
     /**
      * 명령어 실행 요청
@@ -70,11 +73,19 @@ public class CommandController {
 
     /**
      * 명령어 이력 조회 (페이징)
+     *
+     * @param pageable 페이징 정보
+     * @param status 상태 필터 (선택)
+     * @param clientId 클라이언트 ID 필터 (선택, Admin만 사용 가능)
+     * @param targetHost 대상 호스트 필터 (선택)
+     * @param authentication 인증 정보
      */
     @GetMapping
     public ResponseEntity<Page<CommandResponse>> getCommands(
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
         @RequestParam(required = false) CommandStatus status,
+        @RequestParam(required = false) Long clientId,
+        @RequestParam(required = false) String targetHost,
         Authentication authentication
     ) {
         Page<Command> commands;
@@ -82,8 +93,18 @@ public class CommandController {
         // Admin인 경우 전체 조회, Client인 경우 자신의 것만 조회
         if (authentication.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            // Admin: 전체 조회
-            if (status != null) {
+            // Admin: 필터 적용하여 조회
+            if (clientId != null) {
+                // clientId로 targetHost 조회
+                ClientCredential client = clientService.getClient(clientId);
+                targetHost = client.getHost();
+            }
+
+            if (targetHost != null && status != null) {
+                commands = commandService.getCommandsByTargetHostAndStatus(targetHost, status, pageable);
+            } else if (targetHost != null) {
+                commands = commandService.getCommandsByTargetHost(targetHost, pageable);
+            } else if (status != null) {
                 commands = commandService.getCommandsByStatus(status, pageable);
             } else {
                 commands = commandService.getCommands(pageable);

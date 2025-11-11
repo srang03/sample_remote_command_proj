@@ -4,10 +4,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import kr.urock.sample_remote_command_proj.domain.admin.AdminKeyService;
 import kr.urock.sample_remote_command_proj.domain.client.ClientCredentialRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,9 +33,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     private static final String API_KEY_HEADER = "X-API-Key";
 
     private final ClientCredentialRepository clientCredentialRepository;
-
-    @Value("${app.security.admin-api-key}")
-    private String adminApiKey;
+    private final AdminKeyService adminKeyService;
 
     @Override
     protected void doFilterInternal(
@@ -58,7 +56,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         // Admin API 인증
         String adminKey = request.getHeader(ADMIN_KEY_HEADER);
         if (adminKey != null) {
-            if (adminKey.equals(adminApiKey)) {
+            if (adminKeyService.validateAdminKey(adminKey)) {
                 authenticateAsAdmin();
                 filterChain.doFilter(request, response);
                 return;
