@@ -26,13 +26,17 @@ public class SshjConnectionManager implements SshConnectionManager {
 
     private final int maxRetryAttempts;
     private final long retryBackoffMs;
+    private final String defaultOutputEncoding;
 
     public SshjConnectionManager(
         @Value("${app.ssh.retry.max-attempts}") int maxRetryAttempts,
-        @Value("${app.ssh.retry.backoff-ms}") long retryBackoffMs
+        @Value("${app.ssh.retry.backoff-ms}") long retryBackoffMs,
+        @Value("${app.ssh.output-encoding:UTF-8}") String defaultOutputEncoding
     ) {
         this.maxRetryAttempts = maxRetryAttempts;
         this.retryBackoffMs = retryBackoffMs;
+        this.defaultOutputEncoding = defaultOutputEncoding;
+        log.info("SSH Connection Manager initialized. Default output encoding: {}", defaultOutputEncoding);
     }
 
     @Override
@@ -44,7 +48,12 @@ public class SshjConnectionManager implements SshConnectionManager {
             attempt++;
             try {
                 ssh = connectWithRetry(connectionInfo, attempt);
-                return executeCommandInternal(ssh, command, connectionInfo.getCommandTimeoutSeconds());
+                return executeCommandInternal(
+                    ssh,
+                    command,
+                    connectionInfo.getCommandTimeoutSeconds(),
+                    connectionInfo.getOutputEncoding()
+                );
             } catch (Exception e) {
                 log.error("SSH command execution failed (attempt {}/{}): {}",
                     attempt, maxRetryAttempts, e.getMessage());
@@ -134,7 +143,8 @@ public class SshjConnectionManager implements SshConnectionManager {
     private SshExecutionResult executeCommandInternal(
         SSHClient ssh,
         String command,
-        Integer timeoutSeconds
+        Integer timeoutSeconds,
+        String outputEncoding
     ) throws IOException {
         Session session = null;
         try {
@@ -144,12 +154,22 @@ public class SshjConnectionManager implements SshConnectionManager {
             // 타임아웃 대기
             cmd.join(timeoutSeconds, TimeUnit.SECONDS);
 
-            // 결과 읽기
-            String output = IOUtils.readFully(cmd.getInputStream()).toString();
-            String errorOutput = IOUtils.readFully(cmd.getErrorStream()).toString();
+            // 인코딩 결정: ConnectionInfo에 지정된 값 우선, 없으면 기본값 사용
+            String encoding = (outputEncoding != null && !outputEncoding.isEmpty())
+                ? outputEncoding : defaultOutputEncoding;
+
+            // 결과 읽기 (올바른 인코딩 사용)
+            String output = new String(
+                IOUtils.readFully(cmd.getInputStream()).toByteArray(),
+                encoding
+            );
+            String errorOutput = new String(
+                IOUtils.readFully(cmd.getErrorStream()).toByteArray(),
+                encoding
+            );
             Integer exitCode = cmd.getExitStatus();
 
-            log.debug("Command executed successfully. Exit code: {}", exitCode);
+            log.debug("Command executed successfully. Exit code: {}, Encoding: {}", exitCode, encoding);
 
             return SshExecutionResult.success(output, errorOutput, exitCode);
 

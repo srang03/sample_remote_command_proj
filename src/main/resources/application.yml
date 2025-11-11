@@ -39,6 +39,8 @@ app:
     retry:
       max-attempts: 3
       backoff-ms: 1000
+    # SSH 명령어 출력 인코딩 (Windows: MS949, Linux: UTF-8)
+    output-encoding: MS949
 
   command:
     whitelist-path: classpath:whitelist.txt
