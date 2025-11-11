@@ -1,0 +1,36 @@
+# Whitelist - Allowed command patterns (Regular Expressions)
+# Commands matching these patterns will be allowed to execute
+
+# Directory listing
+^dir(\s.*)?$
+^ls(\s.*)?$
+
+# System information
+^systeminfo$
+^hostname$
+^whoami$
+^ipconfig(\s.*)?$
+^netstat(\s.*)?$
+
+# Process management
+^tasklist(\s.*)?$
+^ps(\s.*)?$
+
+# Echo and basic output
+^echo\s.*
+
+# File operations (read-only)
+^type\s.*
+^cat\s.*
+^more\s.*
+^less\s.*
+
+# Network diagnostics
+^ping\s.*
+^tracert\s.*
+^nslookup\s.*
+
+# PowerShell safe commands
+^Get-Process$
+^Get-Service$
+^Get-ComputerInfo$

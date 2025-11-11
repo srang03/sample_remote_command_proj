@@ -1,0 +1,52 @@
+# Blacklist - Prohibited command patterns (Regular Expressions)
+# Commands matching these patterns will be rejected
+
+# Destructive file operations
+.*\brm\s+-rf.*
+.*\bdel\s+/[fF].*
+.*\bformat\b.*
+.*\berase\b.*
+.*\brd\s+/[sS].*
+.*\brmdir\s+/[sS].*
+
+# System shutdown/reboot
+.*\bshutdown\b.*
+.*\breboot\b.*
+.*\brestart\b.*
+.*\binit\s+[06].*
+
+# User management (risky)
+.*\bnet\s+user\s+.*\badd\b.*
+.*\buseradd\b.*
+.*\buserdel\b.*
+.*\bpasswd\b.*
+
+# Service manipulation
+.*\bsc\s+delete.*
+.*\bsc\s+stop.*
+.*\bnet\s+stop.*
+
+# Registry operations (Windows)
+.*\breg\s+delete.*
+.*\breg\s+add.*
+.*\bregedit\b.*
+
+# Disk operations
+.*\bdiskpart\b.*
+.*\bfdisk\b.*
+.*\bmkfs\b.*
+
+# Script execution (potential risk)
+.*\bpowershell\s+-ExecutionPolicy\s+Bypass.*
+.*\bcmd\s+/[cC].*
+.*\bbash\s+-c.*
+
+# Network attacks
+.*\bnmap\b.*
+.*\bhping.*
+.*\bmetasploit.*
+
+# Malware-like behavior
+.*\bwget.*\s+http.*\s+&&.*
+.*\bcurl.*\s+http.*\s+\|.*sh.*
+.*\bInvoke-WebRequest.*\s+\|\s+Invoke-Expression.*
