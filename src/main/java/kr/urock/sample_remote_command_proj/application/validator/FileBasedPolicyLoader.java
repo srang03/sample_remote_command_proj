@@ -38,6 +38,10 @@ public class FileBasedPolicyLoader implements CommandPolicyLoader {
     private Set<String> blacklist;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
+    // 파일 변경 감지를 위한 타임스탬프
+    private long whitelistLastModified = 0L;
+    private long blacklistLastModified = 0L;
+
     public FileBasedPolicyLoader(
         ResourceLoader resourceLoader,
         @Value("${app.command.whitelist-path}") String whitelistPath,
@@ -64,10 +68,20 @@ public class FileBasedPolicyLoader implements CommandPolicyLoader {
 
     /**
      * 주기적 리로드 (5초마다, 설정에서 활성화된 경우)
+     * 파일이 실제로 변경된 경우에만 리로드 수행
      */
     @Scheduled(fixedDelayString = "${app.command.policy-check-interval-ms}")
     public void scheduledReload() {
-        if (reloadEnabled) {
+        if (!reloadEnabled) {
+            return;
+        }
+
+        // 파일 변경 감지
+        boolean whitelistChanged = hasFileChanged(whitelistPath, whitelistLastModified);
+        boolean blacklistChanged = hasFileChanged(blacklistPath, blacklistLastModified);
+
+        if (whitelistChanged || blacklistChanged) {
+            log.info("Policy file changes detected. Reloading...");
             reload();
         }
     }
@@ -102,7 +116,11 @@ public class FileBasedPolicyLoader implements CommandPolicyLoader {
             this.whitelist = newWhitelist;
             this.blacklist = newBlacklist;
 
-            log.debug("Policy reloaded. Whitelist: {} patterns, Blacklist: {} patterns",
+            // 타임스탬프 업데이트
+            this.whitelistLastModified = getFileLastModified(whitelistPath);
+            this.blacklistLastModified = getFileLastModified(blacklistPath);
+
+            log.info("Policy reloaded. Whitelist: {} patterns, Blacklist: {} patterns",
                 whitelist.size(), blacklist.size());
         } finally {
             lock.writeLock().unlock();
@@ -147,5 +165,35 @@ public class FileBasedPolicyLoader implements CommandPolicyLoader {
         }
 
         return patterns;
+    }
+
+    /**
+     * 파일 변경 여부 확인
+     *
+     * @param path 파일 경로
+     * @param lastModified 마지막 수정 시간
+     * @return 파일이 변경되었으면 true
+     */
+    private boolean hasFileChanged(String path, long lastModified) {
+        long currentModified = getFileLastModified(path);
+        return currentModified > lastModified;
+    }
+
+    /**
+     * 파일의 마지막 수정 시간 조회
+     *
+     * @param path 파일 경로
+     * @return 마지막 수정 시간 (밀리초), 파일이 없으면 0
+     */
+    private long getFileLastModified(String path) {
+        try {
+            Resource resource = resourceLoader.getResource(path);
+            if (resource.exists()) {
+                return resource.lastModified();
+            }
+        } catch (IOException e) {
+            log.warn("Failed to get last modified time for: {}", path);
+        }
+        return 0L;
     }
 }
