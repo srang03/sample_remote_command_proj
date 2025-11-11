@@ -19,7 +19,8 @@ public class AdminKeyService {
     private String adminApiKey;
 
     // 런타임에 재발급된 키를 저장 (서버 재시작 시 초기화됨)
-    private String runtimeAdminKey = null;
+    // volatile: 멀티스레드 환경에서 변수 가시성 보장
+    private volatile String runtimeAdminKey = null;
 
     /**
      * 현재 유효한 Admin API Key 반환 (마스킹)
@@ -44,14 +45,17 @@ public class AdminKeyService {
      * 런타임 키를 생성하고 기존 키를 무효화
      * 서버 재시작 시 application.yml의 키로 돌아감
      *
+     * synchronized: 동시 재발급 방지 (thread-safe)
+     *
      * @return 새로운 Admin API Key
      */
-    public String regenerateAdminKey() {
+    public synchronized String regenerateAdminKey() {
+        String oldKeyPreview = getCurrentAdminKey().substring(0, Math.min(10, getCurrentAdminKey().length()));
         String newKey = "admin-" + UUID.randomUUID().toString();
         this.runtimeAdminKey = newKey;
 
-        log.warn("Admin API Key regenerated. New key: {}****",
-            newKey.substring(0, 10));
+        log.warn("Admin API Key regenerated. Old key: {}****, New key: {}****",
+            oldKeyPreview, newKey.substring(0, 10));
 
         return newKey;
     }

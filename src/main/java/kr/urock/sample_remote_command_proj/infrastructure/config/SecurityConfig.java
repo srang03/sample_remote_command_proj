@@ -4,6 +4,7 @@ import kr.urock.sample_remote_command_proj.infrastructure.security.ApiKeyAuthFil
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -17,9 +18,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * API Key 기반 인증 사용
  * - Stateless (세션 미사용)
  * - CSRF 비활성화 (REST API)
+ * - Method-level security 활성화 (@PreAuthorize 지원)
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 

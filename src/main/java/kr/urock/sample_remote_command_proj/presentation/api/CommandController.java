@@ -16,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,7 +79,7 @@ public class CommandController {
      * @param pageable 페이징 정보
      * @param status 상태 필터 (선택)
      * @param clientId 클라이언트 ID 필터 (선택, Admin만 사용 가능)
-     * @param targetHost 대상 호스트 필터 (선택)
+     * @param targetHost 대상 호스트 필터 (선택, Admin만 사용 가능)
      * @param authentication 인증 정보
      */
     @GetMapping
@@ -88,34 +90,66 @@ public class CommandController {
         @RequestParam(required = false) String targetHost,
         Authentication authentication
     ) {
+        // clientId 또는 targetHost 파라미터는 Admin만 사용 가능
+        boolean isAdminOnlyParamUsed = (clientId != null || targetHost != null);
+        boolean isAdmin = authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdminOnlyParamUsed && !isAdmin) {
+            throw new AccessDeniedException(
+                "Admin role required to use 'clientId' or 'targetHost' parameters"
+            );
+        }
+
         Page<Command> commands;
 
-        // Admin인 경우 전체 조회, Client인 경우 자신의 것만 조회
-        if (authentication.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            // Admin: 필터 적용하여 조회
-            if (clientId != null) {
-                // clientId로 targetHost 조회
-                ClientCredential client = clientService.getClient(clientId);
-                targetHost = client.getHost();
-            }
-
-            if (targetHost != null && status != null) {
-                commands = commandService.getCommandsByTargetHostAndStatus(targetHost, status, pageable);
-            } else if (targetHost != null) {
-                commands = commandService.getCommandsByTargetHost(targetHost, pageable);
-            } else if (status != null) {
-                commands = commandService.getCommandsByStatus(status, pageable);
-            } else {
-                commands = commandService.getCommands(pageable);
-            }
+        if (isAdmin) {
+            commands = getCommandsForAdmin(pageable, status, clientId, targetHost);
         } else {
-            // Client: 자신의 API Key로 조회
-            String apiKey = authentication.getName();
-            commands = commandService.getCommandsByApiKey(apiKey, pageable);
+            commands = getCommandsForClient(pageable, authentication.getName());
         }
 
         Page<CommandResponse> response = commands.map(CommandResponse::from);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Admin용 명령어 조회 (내부 메서드)
+     */
+    private Page<Command> getCommandsForAdmin(
+        Pageable pageable,
+        CommandStatus status,
+        Long clientId,
+        String targetHost
+    ) {
+        // clientId와 targetHost를 동시에 제공하면 오류 (mutual exclusivity)
+        if (clientId != null && targetHost != null) {
+            throw new IllegalArgumentException(
+                "Cannot specify both 'clientId' and 'targetHost' parameters. Use only one."
+            );
+        }
+
+        // clientId가 제공된 경우, 해당 클라이언트의 targetHost로 변환
+        if (clientId != null) {
+            ClientCredential client = clientService.getClient(clientId);
+            targetHost = client.getHost();
+        }
+
+        if (targetHost != null && status != null) {
+            return commandService.getCommandsByTargetHostAndStatus(targetHost, status, pageable);
+        } else if (targetHost != null) {
+            return commandService.getCommandsByTargetHost(targetHost, pageable);
+        } else if (status != null) {
+            return commandService.getCommandsByStatus(status, pageable);
+        } else {
+            return commandService.getCommands(pageable);
+        }
+    }
+
+    /**
+     * Client용 명령어 조회 (내부 메서드)
+     */
+    private Page<Command> getCommandsForClient(Pageable pageable, String apiKey) {
+        return commandService.getCommandsByApiKey(apiKey, pageable);
     }
 }
