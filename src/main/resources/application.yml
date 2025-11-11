@@ -11,7 +11,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -50,17 +50,6 @@ app:
   encryption:
     # Use environment variable in production: ENCRYPTION_KEY
     secret-key: ${ENCRYPTION_KEY:default-encryption-key-change-me-in-production}
-
-# Logging
-logging:
-  level:
-    root: INFO
-    kr.urock.sample_remote_command_proj: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
 # Actuator
 management:
