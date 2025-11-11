@@ -44,6 +44,15 @@ public class SecurityConfig {
                 // 클라이언트 자가 등록은 인증 없이 접근 가능 (초기 등록)
                 .requestMatchers("/api/clients/register").permitAll()
 
+                // Swagger UI 및 API Docs는 인증 없이 접근 가능
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/webjars/**"
+                ).permitAll()
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
