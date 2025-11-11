@@ -31,3 +31,33 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Security & Secrets ###
+.env
+.env.local
+.env.*.local
+application-prod.yml
+application-prod.properties
+*-secret.yml
+*-secret.properties
+**/secrets/
+api-keys.txt
+credentials.txt
+
+### Logs ###
+logs/
+*.log
+
+### Temporary files ###
+*.tmp
+*.bak
+*.swp
+*~
+
+### macOS ###
+.DS_Store
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
