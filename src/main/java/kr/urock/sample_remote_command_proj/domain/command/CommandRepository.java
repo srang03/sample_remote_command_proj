@@ -50,4 +50,9 @@ public interface CommandRepository extends JpaRepository<Command, Long> {
      * 대상 호스트와 상태로 명령어 개수 조회
      */
     long countByTargetHostAndStatus(String targetHost, CommandStatus status);
+
+    /**
+     * 대상 호스트와 상태로 명령어 조회 (페이징)
+     */
+    Page<Command> findByTargetHostAndStatus(String targetHost, CommandStatus status, Pageable pageable);
 }

@@ -112,6 +112,29 @@ public class CommandService {
     }
 
     /**
+     * 대상 호스트로 명령어 조회
+     *
+     * @param targetHost 대상 호스트
+     * @param pageable 페이징 정보
+     * @return 명령어 목록
+     */
+    public Page<Command> getCommandsByTargetHost(String targetHost, Pageable pageable) {
+        return commandRepository.findByTargetHost(targetHost, pageable);
+    }
+
+    /**
+     * 대상 호스트와 상태로 명령어 조회
+     *
+     * @param targetHost 대상 호스트
+     * @param status 상태
+     * @param pageable 페이징 정보
+     * @return 명령어 목록
+     */
+    public Page<Command> getCommandsByTargetHostAndStatus(String targetHost, CommandStatus status, Pageable pageable) {
+        return commandRepository.findByTargetHostAndStatus(targetHost, status, pageable);
+    }
+
+    /**
      * 명령어 실행 결과 처리
      *
      * @param result 실행 결과
